@@ -24,6 +24,7 @@ class WebGame(Env):
         self.observation_space = Box(low=0, high=255, shape=(1,83,100), dtype=np.uint8)
         self.action_space = Discrete(3)
         # Capture game frames
+        self.cap = mss()
         self.game_location = {'top': 300, 'left': 0, 'width': 600, 'height': 500}
         self.done_location = {'top': 405, 'left': 640, 'width': 660, 'height': 70}
     
@@ -71,6 +72,10 @@ class WebGame(Env):
     
 
 # 2.2 Test the Environment
+env = WebGame()
+env.reset()
+obs=env.get_observation()
+plt.imshow(cv2.cvtColor(obs[0],cv2.COLOR_GRAY2BGR))
 
 # 3. Train Model
 # 3.1 Create Callback
