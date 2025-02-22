@@ -15,6 +15,9 @@ from matplotlib import pyplot as plt
 import time
 from gym import Env
 from gym.spaces import Discrete, Box
+
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract'
+
 # 2.  Build the Environment
 # 2.1 Create Environment
 class WebGame(Env):
@@ -25,8 +28,8 @@ class WebGame(Env):
         self.action_space = Discrete(3)
         # Capture game frames
         self.cap = mss()
-        self.game_location = {'top': 300, 'left': 0, 'width': 600, 'height': 500}
-        self.done_location = {'top': 405, 'left': 640, 'width': 660, 'height': 70}
+        self.game_location = {'top': 200, 'left': 1450, 'width': 400, 'height': 500}
+        self.done_location = {'top': 250, 'left': 1700, 'width': 500, 'height': 70}
     
     def step(self,action):
         action_map = {0: 'space', 1: 'down', 2: 'no_op'}
@@ -54,15 +57,17 @@ class WebGame(Env):
         cv2.destroyAllWindows()
     
     def get_observation(self):
-        raw = np.array(self.cap.grab(self.game_location)[:,:,3].astype(np.uint8))
+        raw = self.cap.grab(self.game_location)  # Capture the screen
+        img = np.array(raw)  # Convert to a NumPy array
+        img = img[:, :, :3]  # Extract RGB channels
         # Preprocess the data -> greyscale and resize
-        gray = cv2.cvtColor(raw, cv2.COLOR_BGR2GRAY)
-        resized = cv2.resize(gray, (100, 83))
-        channel = np.reshape(resized, (1, 83, 100))
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        resized = cv2.resize(gray, (300, 250))
+        channel = np.reshape(resized, (1, 250, 300))
         return channel
     
     def get_done(self):
-        done_cap = np.array(self.cap.grab(self.done_location)[:,:,3].astype(np.uint8))
+        done_cap = np.array(self.cap.grab(self.done_location))
         done_string = ['GAME', 'GAHE']
         done = False
         res = pytesseract.image_to_string(done_cap)[:4]
@@ -73,10 +78,15 @@ class WebGame(Env):
 
 # 2.2 Test the Environment
 env = WebGame()
-env.reset()
 obs=env.get_observation()
-plt.imshow(cv2.cvtColor(obs[0],cv2.COLOR_GRAY2BGR))
+plt.imshow(cv2.cvtColor(obs[0],cv2.COLOR_GRAY2RGB))
+plt.show()
 
+done, done_cap = env.get_done()
+plt.imshow(cv2.cvtColor(done_cap, cv2.COLOR_BGR2RGB))
+plt.show()
+print(pytesseract.image_to_string(done_cap)[:4])
+print(done)
 # 3. Train Model
 # 3.1 Create Callback
 # 3.2 Build DQN Model and Train
