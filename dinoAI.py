@@ -112,7 +112,7 @@ class TrainAndLogCallback(BaseCallback):
         super(TrainAndLogCallback, self).__init__(verbose)
         self.check_freq = check_freq
         self.save_path = save_path
-    def _init_callback(self):
+    def _init_callback( self):
         if self.save_path is not None:
             os.makedirs(self.save_path, exist_ok=True)
     def _on_step(self):
