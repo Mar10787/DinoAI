@@ -78,6 +78,7 @@ class WebGame(Env):
 
 # 2.2 Test the Environment
 env = WebGame()
+"""
 obs=env.get_observation()
 plt.imshow(cv2.cvtColor(obs[0],cv2.COLOR_GRAY2RGB))
 plt.show()
@@ -87,8 +88,39 @@ plt.imshow(cv2.cvtColor(done_cap, cv2.COLOR_BGR2RGB))
 plt.show()
 print(pytesseract.image_to_string(done_cap)[:4])
 print(done)
+
+# Testing Random Actions
+"""
+
 # 3. Train Model
-# 3.1 Create Callback
+# 3.1 Create Callback - Saves Model Throughout Training
+# Import OS for file path management
+import os
+# Import BaseCallback from stable_baselines3
+from stable_baselines3.common.callbacks import BaseCallback
+# Check Environment
+from stable_baselines3.common.env_checker import env_checker
+env_checker.check_env(env)
+
+class TrainAndLoggingCallback(BaseCallback):
+    
+    def __init__(self, check_freq, save_path, verbose=1):
+        super(TrainAndLoggingCallback, self).__init__(verbose)
+        self.check_freq = check_freq
+        self.save_path = save_path
+        
+    def _init_callback(self):
+        if self.save_path is not None:
+            os.makedirs(self.save_path, exist_ok=True)
+    
+    def _on_step(self):
+        if self.n_calls % self.check_freq == 0:
+            model_path = os.path.join(self.save_path, 'best_model_{}'.format(self.n_calls))
+            self.model.save(model_path)
+        return True
+CHECKPOINT_DIR = './train/'
+LOG_DIR = './logs/'
+callback = TrainAndLoggingCallback(check_freq=1000, save_path=CHECKPOINT_DIR)
 # 3.2 Build DQN Model and Train
 
 # 4. Test out Model
