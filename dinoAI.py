@@ -15,8 +15,17 @@ from matplotlib import pyplot as plt
 import time
 from gym import Env
 from gym.spaces import Discrete, Box
+from stable_baselines3 import DQN
+from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.vec_env import DummyVecEnv, VecFrameStack
+import os
+from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common import env_checker
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract'
+
+CHECKPOINT_DIR = './train/'
+LOG_DIR = './logs/'
 
 # 2.  Build the Environment
 # 2.1 Create Environment
@@ -62,8 +71,8 @@ class WebGame(Env):
         img = img[:, :, :3]  # Extract RGB channels
         # Preprocess the data -> greyscale and resize
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        resized = cv2.resize(gray, (300, 250))
-        channel = np.reshape(resized, (1, 250, 300))
+        resized = cv2.resize(gray, (100,83))
+        channel = np.reshape(resized, (1,83,100))
         return channel
     
     def get_done(self):
@@ -75,52 +84,51 @@ class WebGame(Env):
             done = True
         return done, done_cap
     
-
-# 2.2 Test the Environment
-env = WebGame()
-"""
-obs=env.get_observation()
-plt.imshow(cv2.cvtColor(obs[0],cv2.COLOR_GRAY2RGB))
-plt.show()
-
-done, done_cap = env.get_done()
-plt.imshow(cv2.cvtColor(done_cap, cv2.COLOR_BGR2RGB))
-plt.show()
-print(pytesseract.image_to_string(done_cap)[:4])
-print(done)
-
-# Testing Random Actions
-"""
-
-# 3. Train Model
-# 3.1 Create Callback - Saves Model Throughout Training
-# Import OS for file path management
-import os
-# Import BaseCallback from stable_baselines3
-from stable_baselines3.common.callbacks import BaseCallback
-# Check Environment
-from stable_baselines3.common.env_checker import env_checker
-env_checker.check_env(env)
-
-class TrainAndLoggingCallback(BaseCallback):
     
+def test_environment():
+    env = WebGame()
+    obs = env.get_observation()
+    plt.imshow(cv2.cvtColor(obs[0], cv2.COLOR_BGR2RGB))
+    plt.show()
+    done, done_cap = env.get_done()
+    if done:
+        print('Game Over')
+        plt.imshow(done_cap)
+    
+    for episode in range(2):
+        obs = env.reset()
+        done = False
+        total_reward = 0
+        while not done:
+            obs, reward, done, info = env.step(env.action_space.sample())
+            total_reward += reward
+        print('Total Reward for episode {}: {}'.format(episode, total_reward))
+ 
+ 
+# 3. Train the Model
+# 3.1 Creating a Callback
+class TrainAndLogCallback(BaseCallback):
     def __init__(self, check_freq, save_path, verbose=1):
-        super(TrainAndLoggingCallback, self).__init__(verbose)
+        super(TrainAndLogCallback, self).__init__(verbose)
         self.check_freq = check_freq
         self.save_path = save_path
-        
     def _init_callback(self):
         if self.save_path is not None:
             os.makedirs(self.save_path, exist_ok=True)
-    
     def _on_step(self):
         if self.n_calls % self.check_freq == 0:
             model_path = os.path.join(self.save_path, 'best_model_{}'.format(self.n_calls))
             self.model.save(model_path)
         return True
-CHECKPOINT_DIR = './train/'
-LOG_DIR = './logs/'
-callback = TrainAndLoggingCallback(check_freq=1000, save_path=CHECKPOINT_DIR)
-# 3.2 Build DQN Model and Train
+    
 
-# 4. Test out Model
+# 3.2 Building Model
+def model():
+    env = WebGame()
+    callback = TrainAndLogCallback(check_freq=1000, save_path=CHECKPOINT_DIR)
+    model = DQN('CnnPolicy', env, verbose=1, tensorboard_log=LOG_DIR, buffer_size=1200000, learning_starts = 1000)
+    model.learn(total_timesteps=1000000, callback=callback)
+
+
+#test_environment() 
+model()
